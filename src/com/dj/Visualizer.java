@@ -51,12 +51,18 @@ public class Visualizer {
 	public void addPoint(Float point) {
 		this.privatePointCloud.add(point);
 		bounds = CloudUtil.addBounds(bounds, point);
+		
+		//panel.zoom = Math.min(bounds[2]/panel.getWidth(), panel.getHeight()/bounds[3]);
+		
 		panel.repaint();
 	};
 	
 	public void addPointCloud(List<Float> pointCloud) {
 		this.pointCloudList.add(pointCloud);
 		bounds = CloudUtil.addBounds(bounds, CloudUtil.getBounds(pointCloud));
+		
+		//panel.zoom = Math.min(panel.getWidth()/bounds[2], panel.getHeight()/bounds[3]);
+		panel.zoom = Math.min(panel.getWidth()/((bounds[2]*10)+20),panel.getHeight()/((bounds[3]*10)+20));
 		panel.repaint();
 	};
 
@@ -73,6 +79,8 @@ public class Visualizer {
 		public MyPanel() {
 			setBackground(new Color(50, 050, 52));
 			setBounds(0, 0, 50, 50);
+			
+			
 			
 			addMouseWheelListener(new MouseWheelListener() {
 				
@@ -124,8 +132,11 @@ public class Visualizer {
 			AffineTransform at = new AffineTransform().getTranslateInstance(10, this.getHeight()-10);
             //at.translate(anchorx, anchory);
 			
+			
+			
             at.scale(zoom, -zoom);
-            //at.translate(-100, -100);
+            
+            
             
             
             g2d.setTransform(at);
