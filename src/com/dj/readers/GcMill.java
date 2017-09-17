@@ -13,6 +13,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.swing.JFrame;
+
 import org.apache.commons.lang3.StringUtils;
 
 public class GcMill {
@@ -20,6 +22,8 @@ public class GcMill {
 	private Set<Float> pointCloud = new HashSet<>();
 	
 	List<Float> collisionCloud = new ArrayList<>();
+	
+	private float minDistance = 0.7f;
 	
 	public GcMill(File file, ExcellonDrill drill, java.lang.Float mirrorAxisXCoord) throws IOException {
 		InputStream is = new FileInputStream(file);
@@ -87,25 +91,35 @@ public class GcMill {
 					//System.out.println(String.format("%1d. %2s", counter, point.toString()));
 										
 					
-					List<Float> collisions = checkCollisions(point, drillCloud, 1.0f);
+					List<Float> collisions = checkCollisions(point, drillCloud, minDistance);
 					
 					if(!collisions.isEmpty()){
 						messageLog.append(String.format("Probe %1s on line %2d collision with points %3s\n", point, lineNo, collisions.toString()));
 						
 						Float originalPoint = new Float(point.x, point.y);
-								
-						//compute movement vect normalized to length 0.3f
-						Float distVect = new Float(point.x-collisions.get(0).x, point.y-collisions.get(0).y);
-						float dist = (float) distVect.distance(new Float(0f,0f));
-						distVect.x = distVect.x*(0.3f/dist);
-						distVect.y = distVect.y*(0.3f/dist);
-						// correct the position
-						while((point.distance(collisions.get(0))<1.0f) && (!checkCollisions(point, drillCloud, 1.0f).isEmpty())){
-							point.x = point.x+distVect.x;
-							point.y = point.y+distVect.y;
+						
+						//8-direction points around the original point, checked for collision
+						
+						
+						for (int phi=0; phi<360; phi+=15) {
+							float dist = 0.9f;
+							
+							Float testPoint = new Float();
+							testPoint.x = originalPoint.x +  (dist* ((float)Math.cos(Math.toRadians(phi))));
+							testPoint.y = originalPoint.y +  (dist* ((float)Math.sin(Math.toRadians(phi))));
+									//new Float(originalPoint.x + (dist*Math.sin(phi)), originalPoint.y+ (dist*Math.cos(phi)));
+							
+							messageLog.append("phi: "+phi+" deltaX: "+ dist* ((float)Math.cos(Math.toRadians(phi)))+" deltaY: "+dist* ((float)Math.sin(Math.toRadians(phi)))+"\n");
+							
+							List<Float> collisions2 = checkCollisions(testPoint, drillCloud, minDistance);
+							if(collisions2.isEmpty()){
+								point = testPoint;
+								break;
+							}
 						}
 						
 						messageLog.append(lineNo).append(": ").append(line).append(" > ");
+
 						line = StringUtils.replace(line, "X"+xCoord, "X"+String.valueOf(point.x));
 						line = StringUtils.replace(line, "Y"+yCoord, "Y"+String.valueOf(point.y));
 						
@@ -118,30 +132,6 @@ public class GcMill {
 						}
 					}
 					
-					/*
-					// PROCESS ON LINE LEVEL, CHANGING THE LINE IN THE PROCESS
-					int serial =0;
-					boolean conflict = false;
-					for(Float drillPoint: drillCloud) {
-						double dist = point.distance(drillPoint);
-						if(dist<1){
-							serial++;
-							conflict = true;
-							//System.out.println(String.format("Probe point %1s conflict with drill %2s. Distance %3s", point, drillPoint, dist));
-							messageLog.append(String.format("Probe point %1s on line %2d conflict with drill %3s. Distance %4s", point, lineNo, drillPoint, dist )).append("\n");
-							
-						}
-					}
-					
-					if(serial>0){
-						
-						// THIS NEEDS TO CHANGE TO PROGRESSIVE DISTANCING FROM THE POINT OF COLLISION, WITH CONSTANT CHECKING TO ENSURE NO CONFLICT IS CREATED 
-						point.x+=1;
-						messageLog.append(lineNo).append(": ").append(line).append(" > ");
-						line = StringUtils.replace(line, "X"+xCoord, "X"+String.valueOf(point.x));
-						messageLog.append(line).append("\n");
-					}
-					*/
 					
 					pointCloud.add(point);
 					
@@ -181,7 +171,7 @@ public class GcMill {
 		
 		for(Float point:pointCloud){
 			
-			List<Float> collisions = checkCollisions(point, drillCloud, 1.0f);
+			List<Float> collisions = checkCollisions(point, drillCloud, minDistance);
 			if(!collisions.isEmpty()){
 				messageLog.append(String.format("ERROR: %1s collision with %2s\n", point, collisions.toString()));
 				collisionCloud.add(point);
